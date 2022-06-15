@@ -83,3 +83,43 @@ impl Exponentiate for u8 {
         }
     }
 }
+
+pub trait Logarithm {
+    fn logarithm(self, base: Self) -> Self;
+}
+
+impl Logarithm for u64 {
+    fn logarithm(self, base: Self) -> Self {
+        asm(r1: self, r2: base, r3) {
+            mlog r3 r1 r2;
+            r3: Self
+        }
+    }
+}
+
+impl Logarithm for u32 {
+    fn logarithm(self, base: Self) -> Self {
+        asm(r1: self, r2: base, r3) {
+            mlog r3 r1 r2;
+            r3: Self
+        }
+    }
+}
+
+impl Logarithm for u16 {
+    fn logarithm(self, base: Self) -> Self {
+        asm(r1: self, r2: base, r3) {
+            mlog r3 r1 r2;
+            r3: Self
+        }
+    }
+}
+
+impl Logarithm for u8 {
+    fn logarithm(self, base: Self) -> Self {
+        asm(r1: self, r2: base, r3) {
+            mlog r3 r1 r2;
+            r3: Self
+        }
+    }
+}
