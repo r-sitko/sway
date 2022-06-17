@@ -1,14 +1,14 @@
 #![allow(dead_code)]
 
 use crate::{
-    core::typed_token_type::{AstToken, TokenMap, TokenType, TypedAstToken},
-    utils,
+    core::typed_token_type::{AstToken, TokenMap, TokenType},
+    utils::token::{desugared_op, to_ident_key},
 };
-use sway_types::{ident::Ident, span::Span, Spanned};
+use sway_types::ident::Ident;
 
 use sway_core::{
-    constants::TUPLE_NAME_PREFIX, parse_tree::MethodName, AstNode, AstNodeContent, Declaration,
-    Expression, FunctionDeclaration, IntrinsicFunctionKind, WhileLoop,
+    constants::TUPLE_NAME_PREFIX, AstNode, AstNodeContent, Declaration, Expression,
+    FunctionDeclaration, IntrinsicFunctionKind, WhileLoop,
 };
 
 pub fn traverse_node(node: &AstNode, tokens: &mut TokenMap) {
@@ -26,12 +26,6 @@ pub fn traverse_node(node: &AstNode, tokens: &mut TokenMap) {
         // handle other content types
         _ => {}
     };
-}
-
-// We need to do this work around as the custom PartialEq for Ident impl
-// only checks for the string, not the span.
-fn to_ident_key(ident: &Ident) -> (Ident, Span) {
-    (ident.clone(), ident.span())
 }
 
 fn handle_function_declation(func: &FunctionDeclaration, tokens: &mut TokenMap) {
@@ -288,7 +282,7 @@ fn handle_expression(expression: &Expression, tokens: &mut TokenMap) {
             ..
         } => {
             // Don't collect applications of desugared operators due to mismatched ident lengths.
-            if !utils::token::desugared_op(&method_name) {
+            if !desugared_op(&method_name) {
                 tokens.insert(
                     to_ident_key(&method_name.easy_name()),
                     TokenType::Token(AstToken::Expression(expression.clone())),

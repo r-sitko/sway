@@ -1,6 +1,7 @@
 use crate::core::typed_token_type::{TokenType, TypedAstToken};
 use sway_core::semantic_analysis::ast_node::TypedDeclaration;
 use sway_core::{parse_tree::MethodName, type_engine::TypeId};
+use sway_types::{ident::Ident, span::Span, Spanned};
 
 pub fn get_type_id(token_type: &TokenType) -> Option<TypeId> {
     match token_type {
@@ -38,4 +39,10 @@ pub(crate) fn desugared_op(method_name: &MethodName) -> bool {
         }
     }
     false
+}
+
+// We need to do this work around as the custom PartialEq for Ident impl
+// only checks for the string, not the span.
+pub(crate) fn to_ident_key(ident: &Ident) -> (Ident, Span) {
+    (ident.clone(), ident.span())
 }

@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::core::typed_token_type::{TokenMap, TokenType, TypedAstToken};
+use crate::{
+    core::typed_token_type::{TokenMap, TokenType, TypedAstToken},
+    utils::token::to_ident_key,
+};
 use sway_core::semantic_analysis::ast_node::{
     expression::{
         typed_expression::TypedExpression, typed_expression_variant::TypedExpressionVariant,
@@ -9,8 +12,7 @@ use sway_core::semantic_analysis::ast_node::{
     while_loop::TypedWhileLoop,
     TypedImplTrait, {TypedAstNode, TypedAstNodeContent, TypedDeclaration},
 };
-use sway_core::type_engine::TypeId;
-use sway_types::{ident::Ident, span::Span, Spanned};
+use sway_types::ident::Ident;
 
 pub fn traverse_node(node: &TypedAstNode, tokens: &mut TokenMap) {
     match &node.content {
@@ -25,12 +27,6 @@ pub fn traverse_node(node: &TypedAstNode, tokens: &mut TokenMap) {
         TypedAstNodeContent::WhileLoop(while_loop) => handle_while_loop(while_loop, tokens),
         TypedAstNodeContent::SideEffect => (),
     };
-}
-
-// We need to do this work around as the custom PartialEq for Ident impl
-// only checks for the string, not the span.
-fn to_ident_key(ident: &Ident) -> (Ident, Span) {
-    (ident.clone(), ident.span())
 }
 
 fn handle_declaration(declaration: &TypedDeclaration, tokens: &mut TokenMap) {
