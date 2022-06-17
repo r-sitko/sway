@@ -3,7 +3,10 @@ use crate::{
         get_const_details, get_enum_details, get_function_details, get_struct_details,
         get_struct_field_details, get_trait_details, TokenType, VariableDetails,
     },
-    utils::common::{extract_var_body, get_range_from_span},
+    utils::{
+        common::{extract_var_body, get_range_from_span},
+        token::desugared_op,
+    },
 };
 use sway_core::{
     constants::TUPLE_NAME_PREFIX, parse_tree::MethodName, type_engine::TypeInfo, AstNode,
@@ -254,16 +257,16 @@ fn handle_declaration(declaration: Declaration, tokens: &mut Vec<Token>) {
                 handle_function_declation(func_dec, tokens);
             }
 
-            for train_fn in abi_dec.interface_surface {
-                let ident = &train_fn.name;
+            for trait_fn in abi_dec.interface_surface {
+                let ident = &trait_fn.name;
                 let token = Token::from_ident(ident, TokenType::TraitFunction);
                 tokens.push(token);
 
-                for param in train_fn.parameters {
+                for param in trait_fn.parameters {
                     handle_function_parameter(&param, tokens);
                 }
 
-                handle_custom_type(&train_fn.return_type, tokens);
+                handle_custom_type(&trait_fn.return_type, tokens);
             }
         }
         Declaration::ConstantDeclaration(const_dec) => {
@@ -463,16 +466,4 @@ fn handle_while_loop(while_loop: WhileLoop, tokens: &mut Vec<Token>) {
     for node in while_loop.body.contents {
         traverse_node(node, tokens);
     }
-}
-
-// Check if the given method is a `core::ops` application desugared from short-hand syntax like / + * - etc.
-fn desugared_op(method_name: &MethodName) -> bool {
-    if let MethodName::FromType { ref call_path, .. } = method_name {
-        let prefix0 = call_path.prefixes.get(0).map(|ident| ident.as_str());
-        let prefix1 = call_path.prefixes.get(1).map(|ident| ident.as_str());
-        if let (Some("core"), Some("ops")) = (prefix0, prefix1) {
-            return true;
-        }
-    }
-    false
 }

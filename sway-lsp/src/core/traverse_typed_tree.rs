@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::core::typed_token_type::{TokenMap, TokenType};
+use crate::core::typed_token_type::{TokenMap, TokenType, TypedAstToken};
 use sway_core::semantic_analysis::ast_node::{
     expression::{
         typed_expression::TypedExpression, typed_expression_variant::TypedExpressionVariant,
@@ -38,21 +38,21 @@ fn handle_declaration(declaration: &TypedDeclaration, tokens: &mut TokenMap) {
         TypedDeclaration::VariableDeclaration(variable) => {
             tokens.insert(
                 to_ident_key(&variable.name),
-                TokenType::TypedDeclaration(declaration.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
             );
             handle_expression(&variable.body, tokens);
         }
         TypedDeclaration::ConstantDeclaration(const_decl) => {
             tokens.insert(
                 to_ident_key(&const_decl.name),
-                TokenType::TypedDeclaration(declaration.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
             );
             handle_expression(&const_decl.value, tokens);
         }
         TypedDeclaration::FunctionDeclaration(func) => {
             tokens.insert(
                 to_ident_key(&func.name),
-                TokenType::TypedFunctionDeclaration(func.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedFunctionDeclaration(func.clone())),
             );
             for node in &func.body.contents {
                 traverse_node(node, tokens);
@@ -60,43 +60,43 @@ fn handle_declaration(declaration: &TypedDeclaration, tokens: &mut TokenMap) {
             for parameter in &func.parameters {
                 tokens.insert(
                     to_ident_key(&parameter.name),
-                    TokenType::TypedFunctionParameter(parameter.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedFunctionParameter(parameter.clone())),
                 );
             }
         }
         TypedDeclaration::TraitDeclaration(trait_decl) => {
             tokens.insert(
                 to_ident_key(&trait_decl.name),
-                TokenType::TypedDeclaration(declaration.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
             );
             for train_fn in &trait_decl.interface_surface {
                 tokens.insert(
                     to_ident_key(&train_fn.name),
-                    TokenType::TypedTraitFn(train_fn.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedTraitFn(train_fn.clone())),
                 );
             }
         }
         TypedDeclaration::StructDeclaration(struct_dec) => {
             tokens.insert(
                 to_ident_key(&struct_dec.name),
-                TokenType::TypedDeclaration(declaration.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
             );
             for field in &struct_dec.fields {
                 tokens.insert(
                     to_ident_key(&field.name),
-                    TokenType::TypedStructField(field.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedStructField(field.clone())),
                 );
             }
         }
         TypedDeclaration::EnumDeclaration(enum_decl) => {
             tokens.insert(
                 to_ident_key(&enum_decl.name),
-                TokenType::TypedDeclaration(declaration.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
             );
             for variant in &enum_decl.variants {
                 tokens.insert(
                     to_ident_key(&variant.name),
-                    TokenType::TypedEnumVariant(variant.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedEnumVariant(variant.clone())),
                 );
             }
         }
@@ -104,7 +104,7 @@ fn handle_declaration(declaration: &TypedDeclaration, tokens: &mut TokenMap) {
             handle_expression(&reassignment.rhs, tokens);
             tokens.insert(
                 to_ident_key(&reassignment.lhs_base_name),
-                TokenType::TypedReassignment(reassignment.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedReassignment(reassignment.clone())),
             );
         }
         TypedDeclaration::ImplTrait(TypedImplTrait {
@@ -115,19 +115,19 @@ fn handle_declaration(declaration: &TypedDeclaration, tokens: &mut TokenMap) {
             for ident in &trait_name.prefixes {
                 tokens.insert(
                     to_ident_key(ident),
-                    TokenType::TypedDeclaration(declaration.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
                 );
             }
 
             tokens.insert(
                 to_ident_key(&trait_name.suffix),
-                TokenType::TypedDeclaration(declaration.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
             );
 
             for method in methods {
                 tokens.insert(
                     to_ident_key(&method.name),
-                    TokenType::TypedFunctionDeclaration(method.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedFunctionDeclaration(method.clone())),
                 );
                 for node in &method.body.contents {
                     traverse_node(node, tokens);
@@ -135,33 +135,35 @@ fn handle_declaration(declaration: &TypedDeclaration, tokens: &mut TokenMap) {
                 for paramater in &method.parameters {
                     tokens.insert(
                         to_ident_key(&paramater.name),
-                        TokenType::TypedFunctionParameter(paramater.clone()),
+                        TokenType::TypedToken(TypedAstToken::TypedFunctionParameter(
+                            paramater.clone(),
+                        )),
                     );
                 }
 
                 let return_type_ident = Ident::new(method.return_type_span.clone());
                 tokens.insert(
                     to_ident_key(&return_type_ident),
-                    TokenType::TypedFunctionDeclaration(method.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedFunctionDeclaration(method.clone())),
                 );
             }
         }
         TypedDeclaration::AbiDeclaration(abi_decl) => {
             tokens.insert(
                 to_ident_key(&abi_decl.name),
-                TokenType::TypedDeclaration(declaration.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
             );
             for trait_fn in &abi_decl.interface_surface {
                 tokens.insert(
                     to_ident_key(&trait_fn.name),
-                    TokenType::TypedTraitFn(trait_fn.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedTraitFn(trait_fn.clone())),
                 );
             }
         }
         TypedDeclaration::GenericTypeForFunctionScope { name, .. } => {
             tokens.insert(
                 to_ident_key(name),
-                TokenType::TypedDeclaration(declaration.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedDeclaration(declaration.clone())),
             );
         }
         TypedDeclaration::ErrorRecovery => {}
@@ -169,7 +171,7 @@ fn handle_declaration(declaration: &TypedDeclaration, tokens: &mut TokenMap) {
             for field in &storage_decl.fields {
                 tokens.insert(
                     to_ident_key(&field.name),
-                    TokenType::TypedStorageField(field.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedStorageField(field.clone())),
                 );
             }
         }
@@ -177,7 +179,9 @@ fn handle_declaration(declaration: &TypedDeclaration, tokens: &mut TokenMap) {
             for field in &storage_reassignment.fields {
                 tokens.insert(
                     to_ident_key(&field.name),
-                    TokenType::TypeCheckedStorageReassignDescriptor(field.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypeCheckedStorageReassignDescriptor(
+                        field.clone(),
+                    )),
                 );
             }
             handle_expression(&storage_reassignment.rhs, tokens);
@@ -198,12 +202,12 @@ fn handle_expression(expression: &TypedExpression, tokens: &mut TokenMap) {
             for ident in &call_path.prefixes {
                 tokens.insert(
                     to_ident_key(ident),
-                    TokenType::TypedExpression(expression.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
                 );
             }
             tokens.insert(
                 to_ident_key(&call_path.suffix),
-                TokenType::TypedExpression(expression.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
             );
 
             for exp in contract_call_params.values() {
@@ -211,7 +215,10 @@ fn handle_expression(expression: &TypedExpression, tokens: &mut TokenMap) {
             }
 
             for (ident, exp) in arguments {
-                tokens.insert(to_ident_key(ident), TokenType::TypedExpression(exp.clone()));
+                tokens.insert(
+                    to_ident_key(ident),
+                    TokenType::TypedToken(TypedAstToken::TypedExpression(exp.clone())),
+                );
                 handle_expression(exp, tokens);
             }
 
@@ -226,7 +233,7 @@ fn handle_expression(expression: &TypedExpression, tokens: &mut TokenMap) {
         TypedExpressionVariant::VariableExpression { ref name } => {
             tokens.insert(
                 to_ident_key(name),
-                TokenType::TypedExpression(expression.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
             );
         }
         TypedExpressionVariant::Tuple { fields } => {
@@ -249,12 +256,12 @@ fn handle_expression(expression: &TypedExpression, tokens: &mut TokenMap) {
         } => {
             tokens.insert(
                 to_ident_key(struct_name),
-                TokenType::TypedExpression(expression.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
             );
             for field in fields {
                 tokens.insert(
                     to_ident_key(&field.name),
-                    TokenType::TypedExpression(field.value.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedExpression(field.value.clone())),
                 );
                 handle_expression(&field.value, tokens);
             }
@@ -285,7 +292,7 @@ fn handle_expression(expression: &TypedExpression, tokens: &mut TokenMap) {
             handle_expression(prefix, tokens);
             tokens.insert(
                 to_ident_key(&field_to_access.name),
-                TokenType::TypedExpression(expression.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
             );
         }
         TypedExpressionVariant::TupleElemAccess { prefix, .. } => {
@@ -298,12 +305,12 @@ fn handle_expression(expression: &TypedExpression, tokens: &mut TokenMap) {
             for ident in &abi_name.prefixes {
                 tokens.insert(
                     to_ident_key(ident),
-                    TokenType::TypedExpression(expression.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
                 );
             }
             tokens.insert(
                 to_ident_key(&abi_name.suffix),
-                TokenType::TypedExpression(expression.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
             );
             handle_expression(address, tokens);
         }
@@ -311,7 +318,7 @@ fn handle_expression(expression: &TypedExpression, tokens: &mut TokenMap) {
             for field in &storage_access.fields {
                 tokens.insert(
                     to_ident_key(&field.name),
-                    TokenType::TypedExpression(expression.clone()),
+                    TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
                 );
             }
         }
@@ -326,7 +333,7 @@ fn handle_expression(expression: &TypedExpression, tokens: &mut TokenMap) {
             handle_expression(exp, tokens);
             tokens.insert(
                 to_ident_key(&variant.name),
-                TokenType::TypedExpression(expression.clone()),
+                TokenType::TypedToken(TypedAstToken::TypedExpression(expression.clone())),
             );
         }
     }
@@ -347,24 +354,5 @@ fn handle_while_loop(while_loop: &TypedWhileLoop, tokens: &mut TokenMap) {
     handle_expression(&while_loop.condition, tokens);
     for node in &while_loop.body.contents {
         traverse_node(node, tokens);
-    }
-}
-
-pub fn get_type_id(token: &TokenType) -> Option<TypeId> {
-    match token {
-        TokenType::TypedDeclaration(dec) => match dec {
-            TypedDeclaration::VariableDeclaration(var_decl) => Some(var_decl.type_ascription),
-            TypedDeclaration::ConstantDeclaration(const_decl) => Some(const_decl.value.return_type),
-            _ => None,
-        },
-        TokenType::TypedExpression(exp) => Some(exp.return_type),
-        TokenType::TypedFunctionParameter(func_param) => Some(func_param.type_id),
-        TokenType::TypedStructField(struct_field) => Some(struct_field.type_id),
-        TokenType::TypedEnumVariant(enum_var) => Some(enum_var.type_id),
-        TokenType::TypedTraitFn(trait_fn) => Some(trait_fn.return_type),
-        TokenType::TypedStorageField(storage_field) => Some(storage_field.type_id),
-        TokenType::TypeCheckedStorageReassignDescriptor(storage_desc) => Some(storage_desc.type_id),
-        TokenType::TypedReassignment(reassignment) => Some(reassignment.lhs_type),
-        _ => None,
     }
 }

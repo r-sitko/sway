@@ -137,7 +137,7 @@ impl TextDocument {
             // Retrieve the typed_ast_node from our BTreeMap
             if let Some(token) = self.token_map.get(&(ident, span)) {
                 // Look up the tokens TypeId
-                if let Some(type_id) = traverse_typed_tree::get_type_id(token) {
+                if let Some(type_id) = utils::token::get_type_id(token) {
                     tracing::info!("type_id = {:#?}", type_id);
 
                     // Use the TypeId to look up the actual type (I think there is a method in the type_engine for this)

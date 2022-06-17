@@ -1,9 +1,8 @@
 use crate::core::{
     token::Token,
-    traverse_typed_tree::get_type_id,
-    typed_token_type::{TokenMap, TokenType},
+    typed_token_type::{TokenMap, TokenType, TypedAstToken},
 };
-use crate::utils::common::get_range_from_span;
+use crate::utils::{common::get_range_from_span, token::get_type_id};
 use sway_types::{Ident, Spanned};
 use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity};
 
@@ -56,19 +55,22 @@ pub fn debug_print_ident_and_token(ident: &Ident, token: &TokenType) {
     );
 }
 
-fn ast_node_type(token: &TokenType) -> String {
-    match &token {
-        TokenType::TypedDeclaration(dec) => dec.friendly_name().to_string(),
-        TokenType::TypedExpression(exp) => exp.expression.to_string(),
-        TokenType::TypedFunctionParameter(_) => "function parameter".to_string(),
-        TokenType::TypedStructField(_) => "struct field".to_string(),
-        TokenType::TypedEnumVariant(_) => "enum variant".to_string(),
-        TokenType::TypedTraitFn(_) => "trait function".to_string(),
-        TokenType::TypedStorageField(_) => "storage field".to_string(),
-        TokenType::TypeCheckedStorageReassignDescriptor(_) => {
-            "storage reassignment descriptor".to_string()
-        }
-        TokenType::TypedReassignment(_) => "reassignment".to_string(),
-        _ => "".to_string(),
+fn ast_node_type(token_type: &TokenType) -> String {
+    match &token_type {
+        TokenType::Token(_ast_token) => "".to_string(),
+        TokenType::TypedToken(typed_ast_token) => match typed_ast_token {
+            TypedAstToken::TypedDeclaration(dec) => dec.friendly_name().to_string(),
+            TypedAstToken::TypedExpression(exp) => exp.expression.to_string(),
+            TypedAstToken::TypedFunctionParameter(_) => "function parameter".to_string(),
+            TypedAstToken::TypedStructField(_) => "struct field".to_string(),
+            TypedAstToken::TypedEnumVariant(_) => "enum variant".to_string(),
+            TypedAstToken::TypedTraitFn(_) => "trait function".to_string(),
+            TypedAstToken::TypedStorageField(_) => "storage field".to_string(),
+            TypedAstToken::TypeCheckedStorageReassignDescriptor(_) => {
+                "storage reassignment descriptor".to_string()
+            }
+            TypedAstToken::TypedReassignment(_) => "reassignment".to_string(),
+            _ => "".to_string(),
+        },
     }
 }
