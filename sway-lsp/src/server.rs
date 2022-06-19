@@ -255,7 +255,7 @@ mod tests {
             .unwrap()
             .parent()
             .unwrap()
-            .join("examples/liquidity_pool");
+            .join("examples/msg_sender"); //liquidity_pool");
         let src_path = manifest_dir.join("src/main.sw");
         let mut file = fs::File::open(&src_path).unwrap();
         let mut sway_program = String::new();

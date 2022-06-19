@@ -171,8 +171,19 @@ impl TextDocument {
     }
 
     fn parse_tokens_from_text(&self) -> Result<(Vec<Token>, Vec<Diagnostic>), Vec<Diagnostic>> {
+        let manifest_dir = PathBuf::from(self.get_uri());
+        let manifest =
+            pkg::ManifestFile::from_dir(&manifest_dir, forc::utils::SWAY_GIT_TAG).unwrap();
+        let build_config = pkg::BuildConfig {
+            print_ir: false,
+            print_finalized_asm: false,
+            print_intermediate_asm: false,
+            silent: true,
+        };
         let text = Arc::from(self.get_text());
-        let parsed_result = parse(text, None);
+        let sway_build_config =
+            pkg::sway_build_config(manifest.dir(), &manifest.entry_path(), &build_config).unwrap();
+        let parsed_result = parse(text, Some(&sway_build_config));
         match parsed_result.value {
             None => Err(capabilities::diagnostic::get_diagnostics(
                 parsed_result.warnings,
