@@ -12,6 +12,7 @@ use ::tx::*;
 
 pub enum AuthError {
     InputsNotAllOwnedBySameAddress: (),
+    NoCoinOrMessageInputs: (),
 }
 
 /// Returns `true` if the caller is external (i.e. a script).
@@ -82,6 +83,11 @@ fn get_coins_owner() -> Result<Identity, AuthError> {
             };
         };
     }
+
+    // we want to return an error here rather than reverting
+    if candidate.is_none() {
+        return Result::Error(AuthError::NoCoinOrMessageInputs);
+    };
 
     // `candidate` must be `Option::Some` at this point, so can unwrap safely.
     // Note: `inputs_count` is guaranteed to be at least 1 for any valid tx.
