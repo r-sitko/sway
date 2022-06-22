@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
 use crate::{
-    core::typed_token_type::{TokenMap, TokenType, TypedAstToken},
+    core_v2::{
+        token::{TokenMap, TokenType, TypedAstToken},
+    },
     utils::token::to_ident_key,
 };
 use sway_core::semantic_analysis::ast_node::{

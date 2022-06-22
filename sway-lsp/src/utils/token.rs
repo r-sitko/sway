@@ -1,4 +1,6 @@
-use crate::core::typed_token_type::{TokenType, TypedAstToken};
+use crate::core_v2::{
+    token::{TokenType, TypedAstToken},
+};
 use sway_core::semantic_analysis::ast_node::TypedDeclaration;
 use sway_core::{parse_tree::MethodName, type_engine::TypeId};
 use sway_types::{ident::Ident, span::Span, Spanned};

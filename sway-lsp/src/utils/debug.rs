@@ -1,6 +1,8 @@
 use crate::core::{
     token::Token,
-    typed_token_type::{TokenMap, TokenType, TypedAstToken},
+};
+use crate::core_v2::{
+    token::{TokenMap, TokenType, TypedAstToken},
 };
 use crate::utils::{common::get_range_from_span, token::get_type_id};
 use sway_types::{Ident, Spanned};

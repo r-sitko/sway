@@ -2,8 +2,8 @@
 
 use super::token::Token;
 use super::token_type::TokenType;
-use super::traverse_typed_tree;
-use super::typed_token_type::TokenMap;
+use crate::core_v2::traverse_typed_tree;
+use crate::core_v2::token::TokenMap;
 
 use crate::{capabilities, core::token::traverse_node, utils};
 use forc_pkg::{self as pkg};

@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
 use crate::{
-    core::typed_token_type::{AstToken, TokenMap, TokenType},
+    core_v2::{
+        token::{AstToken, TokenMap, TokenType},
+    },
     utils::token::{desugared_op, to_ident_key},
 };
 use sway_types::ident::Ident;
