@@ -66,7 +66,7 @@ impl Session {
     pub fn update_text_document(&self, url: &Url, changes: Vec<TextDocumentContentChangeEvent>) {
         if let Some(ref mut document) = self.documents.get_mut(url.path()) {
             changes.iter().for_each(|change| {
-                document.apply_change(change);
+                document.update_text(change);
             });
         }
     }

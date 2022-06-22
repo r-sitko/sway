@@ -54,9 +54,7 @@ impl Backend {
 
 fn capabilities() -> ServerCapabilities {
     ServerCapabilities {
-        text_document_sync: Some(TextDocumentSyncCapability::Kind(
-            TextDocumentSyncKind::INCREMENTAL,
-        )),
+        text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         definition_provider: Some(OneOf::Left(true)),
         semantic_tokens_provider: capabilities::semantic_tokens::get_semantic_tokens(),
         document_symbol_provider: Some(OneOf::Left(true)),
