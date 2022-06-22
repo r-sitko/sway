@@ -1,3 +1,4 @@
+pub(crate) mod document;
 pub(crate) mod error;
 pub mod session;
 pub(crate) mod token;

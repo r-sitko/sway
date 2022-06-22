@@ -1,9 +1,5 @@
-use crate::core::{
-    token::Token,
-};
-use crate::core_v2::{
-    token::{TokenMap, TokenType, TypedAstToken},
-};
+use crate::core::token::Token;
+use crate::core_v2::token::{TokenMap, TokenType, TypedAstToken};
 use crate::utils::{common::get_range_from_span, token::get_type_id};
 use sway_types::{Ident, Spanned};
 use tower_lsp::lsp_types::{Diagnostic, DiagnosticSeverity};

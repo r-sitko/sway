@@ -1,14 +1,12 @@
 use crate::{
     capabilities::{self, formatting::get_format_text_edits},
-    sway_config::SwayConfig,
     core_v2::{
-        error::{
-            ConfigError
-        },
-        traverse_parse_tree,
-        traverse_typed_tree,
+        document::TextDocument,
+        error::{ConfigError, DocumentError},
         token::TokenMap,
-    }
+        traverse_parse_tree, traverse_typed_tree,
+    },
+    sway_config::SwayConfig,
 };
 use forc_pkg::{self as pkg};
 use serde_json::Value;
@@ -21,18 +19,12 @@ use sway_core::{parse, semantic_analysis::ast_node::TypedAstNode, CompileAstResu
 
 use tower_lsp::lsp_types::{
     CompletionItem, Diagnostic, GotoDefinitionResponse, Position, Range, SemanticToken,
-    SymbolInformation, TextDocumentContentChangeEvent, TextEdit, Url, WorkspaceFolder,
+    SymbolInformation, DidOpenTextDocumentParams, TextDocumentContentChangeEvent, TextEdit, Url, WorkspaceFolder,
 };
-
 
 #[derive(Debug)]
 pub struct Session {
-    #[allow(dead_code)]
-    language_id: String,
-    #[allow(dead_code)]
-    version: i32,
-    uri: String, 
-    text: String,
+    pub documents: HashMap<String, TextDocument>,
     pub manifest: Option<pkg::ManifestFile>,
     pub token_map: TokenMap,
     pub config: RwLock<SwayConfig>,
@@ -41,10 +33,7 @@ pub struct Session {
 impl Session {
     pub fn new() -> Self {
         Session {
-            language_id: "sway".into(),
-            version: 1,
-            uri: "".to_string(),
-            text: "".to_string(),
+            documents: HashMap::new(),
             manifest: None,
             token_map: HashMap::new(),
             config: RwLock::new(SwayConfig::default()),
@@ -61,19 +50,19 @@ impl Session {
         match &self.manifest {
             Some(manifest) => {
                 pkg::sway_build_config(manifest.dir(), &manifest.entry_path(), &build_config)
-                .map_err(|_| ConfigError::BuildConfig)
+                    .map_err(|_| ConfigError::BuildConfig)
             }
-            None => {
-                Err(ConfigError::NoManifestFile)
-            }
+            None => Err(ConfigError::NoManifestFile),
         }
     }
-    
+
     // TODO: should I return a Result with this_error Errors?
     pub fn initialize(&mut self, workspace_folder: Option<WorkspaceFolder>) {
         if let Some(workspace_folder) = workspace_folder {
             if let Ok(manifest_dir) = workspace_folder.uri.to_file_path() {
-                if let Ok(manifest) = pkg::ManifestFile::from_dir(&manifest_dir, forc::utils::SWAY_GIT_TAG) {
+                if let Ok(manifest) =
+                    pkg::ManifestFile::from_dir(&manifest_dir, forc::utils::SWAY_GIT_TAG)
+                {
                     self.manifest = Some(manifest);
                 }
             }
@@ -81,22 +70,22 @@ impl Session {
     }
 
     // TODO: create a Vec<Diagnostic> with warnings and errors
-    pub fn parse_project(&mut self, uri: Url, text: String) {
-        self.uri = uri.path().to_string();
-        self.text = text;
+    pub fn parse_project(&mut self, uri: Url) {
         self.token_map.clear();
 
         // First, populate our token_map with un-typed ast nodes
-        self.parse_ast_to_tokens();
+        if let Some(document) = self.documents.get(uri.path()) {
+            let text = Arc::from(document.get_text());
+            self.parse_ast_to_tokens(text);
+        }
 
         // Next, populate our token_map with typed ast nodes
         self.parse_ast_to_typed_tokens();
     }
 
-    fn parse_ast_to_tokens(&mut self) {
+    fn parse_ast_to_tokens(&mut self, text: Arc<str>) {
         match self.build_config() {
             Ok(sway_build_config) => {
-                let text = Arc::from(self.text.clone());
                 let parsed_result = parse(text, Some(&sway_build_config));
                 match parsed_result.value {
                     None => (),
@@ -106,7 +95,7 @@ impl Session {
                         }
                     }
                 }
-            },
+            }
             Err(_) => (),
         }
     }
@@ -115,18 +104,44 @@ impl Session {
         match &self.manifest {
             Some(manifest) => {
                 let silent_mode = true;
-                let res = pkg::check(&manifest.dir(), silent_mode, forc::utils::SWAY_GIT_TAG).unwrap();
-        
+                let lock_path = forc_util::lock_path(manifest.dir());
+                let plan =
+                    pkg::BuildPlan::from_lock_file(&lock_path, forc::utils::SWAY_GIT_TAG).unwrap();
+                let res = pkg::check(&plan, silent_mode, forc::utils::SWAY_GIT_TAG).unwrap();
+
                 match res {
                     CompileAstResult::Failure { .. } => (),
                     CompileAstResult::Success { typed_program, .. } => {
                         for node in &typed_program.root.all_nodes {
                             traverse_typed_tree::traverse_node(node, &mut self.token_map);
                         }
-                    },
+                    }
                 }
             }
             None => (),
+        }
+    }
+
+    pub fn store_document(&mut self, params: DidOpenTextDocumentParams) -> Result<(), DocumentError> {
+        let uri = params.text_document.uri.path();
+        match TextDocument::build_from_path(uri) {
+            Ok(text_document) => {
+                match self
+                    .documents
+                    .insert(uri.to_string(), text_document)
+                {
+                    None => Ok(()),
+                    _ => Err(DocumentError::DocumentAlreadyStored),
+                }
+            }
+            Err(err) => Err(err)
+        }
+    }
+
+    pub fn remove_document(&mut self, url: &Url) -> Result<TextDocument, DocumentError> {
+        match self.documents.remove(url.path()) {
+            Some(text_document) => Ok(text_document),
+            None => Err(DocumentError::DocumentNotFound),
         }
     }
 
