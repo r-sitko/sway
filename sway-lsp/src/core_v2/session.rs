@@ -70,7 +70,6 @@ impl Session {
         }
     }
 
-    // TODO: create a Vec<Diagnostic> with warnings and errors
     pub fn parse_project(&mut self, uri: Url) {
         self.token_map.clear();
 
