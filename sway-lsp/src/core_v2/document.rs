@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::core_v2::error::LspError;
+use crate::core_v2::error::ServerError;
 use ropey::Rope;
 use tower_lsp::lsp_types::{Position, Range, TextDocumentContentChangeEvent};
 
@@ -15,7 +15,7 @@ pub struct TextDocument {
 }
 
 impl TextDocument {
-    pub fn build_from_path(path: &str) -> Result<Self, LspError> {
+    pub fn build_from_path(path: &str) -> Result<Self, ServerError> {
         match std::fs::read_to_string(&path) {
             Ok(content) => Ok(Self {
                 language_id: "sway".into(),
@@ -23,7 +23,7 @@ impl TextDocument {
                 uri: path.into(),
                 content: Rope::from_str(&content),
             }),
-            Err(_) => Err(LspError::DocumentNotFound),
+            Err(_) => Err(ServerError::DocumentNotFound),
         }
     }
 

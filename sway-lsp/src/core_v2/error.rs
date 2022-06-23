@@ -2,7 +2,7 @@ use thiserror::Error;
 use tower_lsp::lsp_types::Diagnostic;
 
 #[derive(Debug, Error)]
-pub enum LspError {
+pub enum ServerError {
     #[error("could not create a sway build config from manifest")]
     BuildConfig,
 

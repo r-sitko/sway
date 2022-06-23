@@ -1,7 +1,7 @@
 use crate::{
     capabilities::{self, diagnostic, formatting::get_format_text_edits},
     core_v2::{
-        document::TextDocument, error::LspError, token::TokenMap, traverse_parse_tree,
+        document::TextDocument, error::ServerError, token::TokenMap, traverse_parse_tree,
         traverse_typed_tree,
     },
     sway_config::SwayConfig,
@@ -41,7 +41,7 @@ impl Session {
         }
     }
 
-    fn build_config(&self) -> Result<sway_core::BuildConfig, LspError> {
+    fn build_config(&self) -> Result<sway_core::BuildConfig, ServerError> {
         let build_config = pkg::BuildConfig {
             print_ir: false,
             print_finalized_asm: false,
@@ -51,9 +51,9 @@ impl Session {
         match &self.manifest {
             Some(manifest) => {
                 pkg::sway_build_config(manifest.dir(), &manifest.entry_path(), &build_config)
-                    .map_err(|_| LspError::BuildConfig)
+                    .map_err(|_| ServerError::BuildConfig)
             }
-            None => Err(LspError::ManifestFileNotFound),
+            None => Err(ServerError::ManifestFileNotFound),
         }
     }
 
@@ -89,19 +89,19 @@ impl Session {
             Ok(diagnostics) => self.diagnostics = diagnostics,
             Err(error) => {
                 match &error {
-                    LspError::FailedToParse(diagnostics) => {
+                    ServerError::FailedToParse(diagnostics) => {
                         self.diagnostics = diagnostics.clone();
                     }
                     _ => tracing::warn!("{:#?}", error),
                 }
-                if let LspError::FailedToParse(diagnostics) = error {
+                if let ServerError::FailedToParse(diagnostics) = error {
                     self.diagnostics = diagnostics;
                 }
             }
         }
     }
 
-    fn parse_ast_to_tokens(&mut self, text: Arc<str>) -> Result<Vec<Diagnostic>, LspError> {
+    fn parse_ast_to_tokens(&mut self, text: Arc<str>) -> Result<Vec<Diagnostic>, ServerError> {
         match self.build_config() {
             Ok(sway_build_config) => {
                 let parsed_result = parse(text, Some(&sway_build_config));
@@ -115,11 +115,11 @@ impl Session {
                     parsed_result.errors,
                 ))
             }
-            Err(_) => Err(LspError::BuildConfigNotFound),
+            Err(_) => Err(ServerError::BuildConfigNotFound),
         }
     }
 
-    fn parse_ast_to_typed_tokens(&mut self) -> Result<Vec<Diagnostic>, LspError> {
+    fn parse_ast_to_typed_tokens(&mut self) -> Result<Vec<Diagnostic>, ServerError> {
         match &self.manifest {
             Some(manifest) => {
                 let silent_mode = true;
@@ -129,7 +129,7 @@ impl Session {
                 let res = pkg::check(&plan, silent_mode, forc::utils::SWAY_GIT_TAG).unwrap();
 
                 match res {
-                    CompileAstResult::Failure { warnings, errors } => Err(LspError::FailedToParse(
+                    CompileAstResult::Failure { warnings, errors } => Err(ServerError::FailedToParse(
                         capabilities::diagnostic::get_diagnostics(warnings, errors),
                     )),
                     CompileAstResult::Success {
@@ -143,25 +143,25 @@ impl Session {
                     }
                 }
             }
-            None => Err(LspError::BuildConfigNotFound),
+            None => Err(ServerError::BuildConfigNotFound),
         }
     }
 
-    pub fn store_document(&mut self, params: DidOpenTextDocumentParams) -> Result<(), LspError> {
+    pub fn store_document(&mut self, params: DidOpenTextDocumentParams) -> Result<(), ServerError> {
         let uri = params.text_document.uri.path();
         match TextDocument::build_from_path(uri) {
             Ok(text_document) => match self.documents.insert(uri.to_string(), text_document) {
                 None => Ok(()),
-                _ => Err(LspError::DocumentAlreadyStored),
+                _ => Err(ServerError::DocumentAlreadyStored),
             },
             Err(err) => Err(err),
         }
     }
 
-    pub fn remove_document(&mut self, url: &Url) -> Result<TextDocument, LspError> {
+    pub fn remove_document(&mut self, url: &Url) -> Result<TextDocument, ServerError> {
         match self.documents.remove(url.path()) {
             Some(text_document) => Ok(text_document),
-            None => Err(LspError::DocumentNotFound),
+            None => Err(ServerError::DocumentNotFound),
         }
     }
 
