@@ -92,7 +92,7 @@ impl Session {
                     ServerError::FailedToParse(diagnostics) => {
                         self.diagnostics = diagnostics.clone();
                     }
-                    _ => tracing::warn!("{:#?}", error),
+                    _ => tracing::warn!("{:#?}", error), // change this to client.log instead of tracing
                 }
                 if let ServerError::FailedToParse(diagnostics) = error {
                     self.diagnostics = diagnostics;
