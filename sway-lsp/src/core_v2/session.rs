@@ -1,10 +1,8 @@
 use crate::{
-    capabilities::{self, formatting::get_format_text_edits},
+    capabilities::{self, diagnostic, formatting::get_format_text_edits},
     core_v2::{
-        document::TextDocument,
-        error::{ConfigError, DocumentError},
-        token::TokenMap,
-        traverse_parse_tree, traverse_typed_tree,
+        document::TextDocument, error::LspError, token::TokenMap, traverse_parse_tree,
+        traverse_typed_tree,
     },
     sway_config::SwayConfig,
 };
@@ -18,8 +16,9 @@ use std::{
 use sway_core::{parse, semantic_analysis::ast_node::TypedAstNode, CompileAstResult, TreeType};
 
 use tower_lsp::lsp_types::{
-    CompletionItem, Diagnostic, GotoDefinitionResponse, Position, Range, SemanticToken,
-    SymbolInformation, DidOpenTextDocumentParams, TextDocumentContentChangeEvent, TextEdit, Url, WorkspaceFolder,
+    CompletionItem, Diagnostic, DidOpenTextDocumentParams, GotoDefinitionResponse, Position, Range,
+    SemanticToken, SymbolInformation, TextDocumentContentChangeEvent, TextEdit, Url,
+    WorkspaceFolder,
 };
 
 #[derive(Debug)]
@@ -27,6 +26,7 @@ pub struct Session {
     pub documents: HashMap<String, TextDocument>,
     pub manifest: Option<pkg::ManifestFile>,
     pub token_map: TokenMap,
+    pub diagnostics: Vec<Diagnostic>,
     pub config: RwLock<SwayConfig>,
 }
 
@@ -36,11 +36,12 @@ impl Session {
             documents: HashMap::new(),
             manifest: None,
             token_map: HashMap::new(),
+            diagnostics: Vec::new(),
             config: RwLock::new(SwayConfig::default()),
         }
     }
 
-    fn build_config(&self) -> Result<sway_core::BuildConfig, ConfigError> {
+    fn build_config(&self) -> Result<sway_core::BuildConfig, LspError> {
         let build_config = pkg::BuildConfig {
             print_ir: false,
             print_finalized_asm: false,
@@ -50,9 +51,9 @@ impl Session {
         match &self.manifest {
             Some(manifest) => {
                 pkg::sway_build_config(manifest.dir(), &manifest.entry_path(), &build_config)
-                    .map_err(|_| ConfigError::BuildConfig)
+                    .map_err(|_| LspError::BuildConfig)
             }
-            None => Err(ConfigError::NoManifestFile),
+            None => Err(LspError::ManifestFileNotFound),
         }
     }
 
@@ -76,31 +77,50 @@ impl Session {
         // First, populate our token_map with un-typed ast nodes
         if let Some(document) = self.documents.get(uri.path()) {
             let text = Arc::from(document.get_text());
-            self.parse_ast_to_tokens(text);
+            match self.parse_ast_to_tokens(text) {
+                Ok(diagnostics) => self.diagnostics = diagnostics,
+                Err(error) => {
+                    tracing::warn!("{:#?}", error);
+                }
+            }
         }
 
         // Next, populate our token_map with typed ast nodes
-        self.parse_ast_to_typed_tokens();
-    }
-
-    fn parse_ast_to_tokens(&mut self, text: Arc<str>) {
-        match self.build_config() {
-            Ok(sway_build_config) => {
-                let parsed_result = parse(text, Some(&sway_build_config));
-                match parsed_result.value {
-                    None => (),
-                    Some(parse_program) => {
-                        for node in &parse_program.root.tree.root_nodes {
-                            traverse_parse_tree::traverse_node(node, &mut self.token_map);
-                        }
+        match self.parse_ast_to_typed_tokens() {
+            Ok(diagnostics) => self.diagnostics = diagnostics,
+            Err(error) => {
+                match &error {
+                    LspError::FailedToParse(diagnostics) => {
+                        self.diagnostics = diagnostics.clone();
                     }
+                    _ => tracing::warn!("{:#?}", error),
+                }
+                if let LspError::FailedToParse(diagnostics) = error {
+                    self.diagnostics = diagnostics;
                 }
             }
-            Err(_) => (),
         }
     }
 
-    fn parse_ast_to_typed_tokens(&mut self) {
+    fn parse_ast_to_tokens(&mut self, text: Arc<str>) -> Result<Vec<Diagnostic>, LspError> {
+        match self.build_config() {
+            Ok(sway_build_config) => {
+                let parsed_result = parse(text, Some(&sway_build_config));
+                if let Some(parse_program) = parsed_result.value {
+                    for node in &parse_program.root.tree.root_nodes {
+                        traverse_parse_tree::traverse_node(node, &mut self.token_map);
+                    }
+                }
+                Ok(capabilities::diagnostic::get_diagnostics(
+                    parsed_result.warnings,
+                    parsed_result.errors,
+                ))
+            }
+            Err(_) => Err(LspError::BuildConfigNotFound),
+        }
+    }
+
+    fn parse_ast_to_typed_tokens(&mut self) -> Result<Vec<Diagnostic>, LspError> {
         match &self.manifest {
             Some(manifest) => {
                 let silent_mode = true;
@@ -110,38 +130,39 @@ impl Session {
                 let res = pkg::check(&plan, silent_mode, forc::utils::SWAY_GIT_TAG).unwrap();
 
                 match res {
-                    CompileAstResult::Failure { .. } => (),
-                    CompileAstResult::Success { typed_program, .. } => {
+                    CompileAstResult::Failure { warnings, errors } => Err(LspError::FailedToParse(
+                        capabilities::diagnostic::get_diagnostics(warnings, errors),
+                    )),
+                    CompileAstResult::Success {
+                        typed_program,
+                        warnings,
+                    } => {
                         for node in &typed_program.root.all_nodes {
                             traverse_typed_tree::traverse_node(node, &mut self.token_map);
                         }
+                        Ok(capabilities::diagnostic::get_diagnostics(warnings, vec![]))
                     }
                 }
             }
-            None => (),
+            None => Err(LspError::BuildConfigNotFound),
         }
     }
 
-    pub fn store_document(&mut self, params: DidOpenTextDocumentParams) -> Result<(), DocumentError> {
+    pub fn store_document(&mut self, params: DidOpenTextDocumentParams) -> Result<(), LspError> {
         let uri = params.text_document.uri.path();
         match TextDocument::build_from_path(uri) {
-            Ok(text_document) => {
-                match self
-                    .documents
-                    .insert(uri.to_string(), text_document)
-                {
-                    None => Ok(()),
-                    _ => Err(DocumentError::DocumentAlreadyStored),
-                }
-            }
-            Err(err) => Err(err)
+            Ok(text_document) => match self.documents.insert(uri.to_string(), text_document) {
+                None => Ok(()),
+                _ => Err(LspError::DocumentAlreadyStored),
+            },
+            Err(err) => Err(err),
         }
     }
 
-    pub fn remove_document(&mut self, url: &Url) -> Result<TextDocument, DocumentError> {
+    pub fn remove_document(&mut self, url: &Url) -> Result<TextDocument, LspError> {
         match self.documents.remove(url.path()) {
             Some(text_document) => Ok(text_document),
-            None => Err(DocumentError::DocumentNotFound),
+            None => Err(LspError::DocumentNotFound),
         }
     }
 

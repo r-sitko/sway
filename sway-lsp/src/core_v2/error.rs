@@ -1,20 +1,23 @@
-use std::{io, path::PathBuf};
 use thiserror::Error;
+use tower_lsp::lsp_types::Diagnostic;
 
 #[derive(Debug, Error)]
-pub enum ConfigError {
+pub enum LspError {
     #[error("could not create a sway build config from manifest")]
     BuildConfig,
 
-    #[error("no manifest file found")]
-    NoManifestFile,
-}
+    #[error("no build config found")]
+    BuildConfigNotFound,
 
-#[derive(Debug, Error)]
-pub enum DocumentError {
+    #[error("no manifest file found")]
+    ManifestFileNotFound,
+
     #[error("document not found")]
     DocumentNotFound,
 
     #[error("document already stored")]
     DocumentAlreadyStored,
+
+    #[error("Failed to parse typed AST")]
+    FailedToParse(Vec<Diagnostic>),
 }

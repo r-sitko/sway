@@ -21,7 +21,7 @@ pub fn traverse_node(node: &AstNode, tokens: &mut TokenMap) {
         AstNodeContent::ReturnStatement(return_statement) => {
             handle_expression(&return_statement.expr, tokens)
         }
-        AstNodeContent::WhileLoop(while_loop) => handle_while_loop(&while_loop, tokens),
+        AstNodeContent::WhileLoop(while_loop) => handle_while_loop(while_loop, tokens),
         // TODO
         // handle other content types
         _ => {}
@@ -77,7 +77,7 @@ fn handle_declaration(declaration: &Declaration, tokens: &mut TokenMap) {
             }
 
             for func_dec in &trait_decl.methods {
-                handle_function_declation(&func_dec, tokens);
+                handle_function_declation(func_dec, tokens);
             }
         }
         Declaration::StructDeclaration(struct_dec) => {
@@ -127,7 +127,7 @@ fn handle_declaration(declaration: &Declaration, tokens: &mut TokenMap) {
             );
 
             for func_dec in &impl_trait.functions {
-                handle_function_declation(&func_dec, tokens);
+                handle_function_declation(func_dec, tokens);
             }
         }
         Declaration::ImplSelf(impl_self) => {
@@ -135,7 +135,7 @@ fn handle_declaration(declaration: &Declaration, tokens: &mut TokenMap) {
             // handle_custom_type(&impl_self.type_implementing_for, tokens);
 
             for func_dec in &impl_self.functions {
-                handle_function_declation(&func_dec, tokens);
+                handle_function_declation(func_dec, tokens);
             }
         }
         Declaration::AbiDeclaration(abi_decl) => {
@@ -282,7 +282,7 @@ fn handle_expression(expression: &Expression, tokens: &mut TokenMap) {
             ..
         } => {
             // Don't collect applications of desugared operators due to mismatched ident lengths.
-            if !desugared_op(&method_name) {
+            if !desugared_op(method_name) {
                 tokens.insert(
                     to_ident_key(&method_name.easy_name()),
                     TokenType::Token(AstToken::Expression(expression.clone())),
@@ -352,7 +352,7 @@ fn handle_expression(expression: &Expression, tokens: &mut TokenMap) {
         Expression::StorageAccess { field_names, .. } => {
             for field in field_names {
                 tokens.insert(
-                    to_ident_key(&field),
+                    to_ident_key(field),
                     TokenType::Token(AstToken::Expression(expression.clone())),
                 );
             }

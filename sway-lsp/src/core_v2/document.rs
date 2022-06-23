@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
+use crate::core_v2::error::LspError;
 use ropey::Rope;
-use tower_lsp::lsp_types::{Diagnostic, Position, Range, TextDocumentContentChangeEvent};
-use crate::core_v2::error::{ConfigError, DocumentError};
+use tower_lsp::lsp_types::{Position, Range, TextDocumentContentChangeEvent};
 
 #[derive(Debug)]
 pub struct TextDocument {
@@ -15,7 +15,7 @@ pub struct TextDocument {
 }
 
 impl TextDocument {
-    pub fn build_from_path(path: &str) -> Result<Self, DocumentError> {
+    pub fn build_from_path(path: &str) -> Result<Self, LspError> {
         match std::fs::read_to_string(&path) {
             Ok(content) => Ok(Self {
                 language_id: "sway".into(),
@@ -23,7 +23,7 @@ impl TextDocument {
                 uri: path.into(),
                 content: Rope::from_str(&content),
             }),
-            Err(_) => Err(DocumentError::DocumentNotFound),
+            Err(_) => Err(LspError::DocumentNotFound),
         }
     }
 
@@ -107,10 +107,3 @@ struct EditText<'text> {
     end_index: usize,
     change_text: &'text str,
 }
-
-// #[derive(Debug)]
-// pub enum DocumentError {
-//     FailedToParse(Vec<Diagnostic>),
-//     DocumentNotFound,
-//     DocumentAlreadyStored,
-// }
