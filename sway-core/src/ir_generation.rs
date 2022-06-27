@@ -17,7 +17,7 @@ use sway_types::span::Span;
 
 pub(crate) use purity::PurityChecker;
 
-pub(crate) fn compile_program(program: TypedProgram) -> Result<Context, CompileError> {
+pub fn compile_program(program: TypedProgram) -> Result<Context, CompileError> {
     let TypedProgram { kind, root, .. } = program;
 
     let mut ctx = Context::default();

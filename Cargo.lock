@@ -3803,6 +3803,8 @@ dependencies = [
  "rand 0.8.5",
  "regex",
  "serde_json",
+ "sway-core",
+ "sway-ir",
  "tokio",
  "toml",
  "tracing",

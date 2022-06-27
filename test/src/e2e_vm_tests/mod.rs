@@ -37,7 +37,7 @@ struct TestDescription {
     checker: filecheck::Checker,
 }
 
-pub fn run(locked: bool, filter_regex: Option<regex::Regex>) {
+pub fn run(locked: bool, filter_regex: Option<&regex::Regex>) {
     init_tracing_subscriber();
 
     let configured_tests = discover_test_configs().unwrap_or_else(|e| {
@@ -61,7 +61,6 @@ pub fn run(locked: bool, filter_regex: Option<regex::Regex>) {
     } in configured_tests
     {
         if !filter_regex
-            .as_ref()
             .map(|regex| regex.is_match(&name))
             .unwrap_or(true)
         {
@@ -204,7 +203,7 @@ fn discover_test_configs() -> Result<Vec<TestDescription>, String> {
             for entry in std::fs::read_dir(path).unwrap() {
                 recursive_search(&entry.unwrap().path(), configs)?;
             }
-        } else if path.is_file() && path.file_name() == Some(std::ffi::OsStr::new("test.toml")) {
+        } else if path.is_file() && path.file_name().map(|f| f == "test.toml").unwrap_or(false) {
             configs.push(parse_test_toml(path).map_err(wrap_err)?);
         }
         Ok(())
