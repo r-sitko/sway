@@ -23,6 +23,8 @@ fn main() -> bool {
     test_vector_new_string();
     test_vector_new_array();
     test_vector_with_capacity_u64();
+    test_addrof_not_panics_on_struct();
+    test_addrof_panics_on_u8();
     true
 }
 
@@ -1809,4 +1811,16 @@ fn test_vector_with_capacity_u64() {
     match vector.get(5) {
         Option::Some(val) => revert(0), Option::None => (), 
     }
+}
+
+fn test_addrof_not_panics_on_struct() {
+    let number0 = SimpleStruct {
+        x: 0, y: 0x0000000000000000000000000000000000000000000000000000000000000004
+    };
+    let xyz = std::mem::addr_of(number0);
+}
+
+fn test_addrof_panics_on_u8() {
+    let mut number0 = 1u8;
+    let xyz = std::mem::addr_of(number0);
 }
